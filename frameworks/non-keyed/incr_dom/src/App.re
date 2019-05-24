@@ -25,9 +25,9 @@ module Model = {
           [ | `Both(string, string) | `Left(string) | `Right(string)]
         ) =>
         sexp_option('a) =
-        (~key) =>
+        (~key as _) =>
           fun
-          | `Both(a, b) => failwith("Unexpected duplicate")
+          | `Both(_, _) => failwith("Unexpected duplicate")
           | `Left(a) => Some(a)
           | `Right(a) => Some(a);
 
