@@ -6,9 +6,8 @@ open Util;
 module Model = {
   [@deriving (sexp, fields, compare)]
   type t = {
-    // TODO: Change this back to an Int.Map.t once it's working
-    data: array(item),
-    selected: option(item),
+    data: Int.Map.t(string),
+    selected: option(int),
   };
 
   module Updates = {
@@ -19,40 +18,52 @@ module Model = {
 
     let add_some = (model, n) => {
       let newdata = Util.build_data(n);
-      {...model, data: Array.append(model.data, newdata)};
+
+      let merge:
+        (
+          ~key: int,
+          [ | `Both(string, string) | `Left(string) | `Right(string)]
+        ) =>
+        sexp_option('a) =
+        (~key) =>
+          fun
+          | `Both(a, b) => failwith("Unexpected duplicate")
+          | `Left(a) => Some(a)
+          | `Right(a) => Some(a);
+
+      {...model, data: Int.Map.merge(model.data, newdata, ~f=merge)};
     };
 
     let update_every_10 = model => {
-      {...model, data: Array.mapi(model.data, ~f=exclaim)};
+      {...model, data: Int.Map.mapi(model.data, ~f=exclaim)};
     };
 
-    let select = (model, item) => {
-      {...model, selected: Some(item)};
+    let select = (model, idx) => {
+      {...model, selected: Some(idx)};
     };
 
     let swap_rows = model =>
-      if (Array.length(model.data) > 998) {
-        let newdata = Array.copy(model.data);
-        newdata[1] = model.data[998];
-        newdata[998] = model.data[1];
+      if (Int.Map.length(model.data) > 998) {
+        let elem_1 = Int.Map.find_exn(model.data, 1);
+        let elem_2 = Int.Map.find_exn(model.data, 998);
+        let newdata =
+          Int.Map.set(model.data, ~key=1, ~data=elem_1)
+          |> Int.Map.set(_, ~key=998, ~data=elem_2);
         {...model, data: newdata};
       } else {
         model;
       };
 
-    let remove_item = (model, item) => {
-      let isnt_item = c => !phys_equal(item, c);
+    let remove_item = (model, idx) => {
+      let newdata = Int.Map.remove(model.data, idx);
       switch (model.selected) {
-      | Some(n) when phys_equal(n, item) => {
-          selected: None,
-          data: Array.filter(model.data, ~f=isnt_item),
-        }
-      | _ => {...model, data: Array.filter(model.data, ~f=isnt_item)}
+      | Some(n) when n == idx => {selected: None, data: newdata}
+      | _ => {...model, data: newdata}
       };
     };
   };
 
-  let empty = {data: [||], selected: None};
+  let empty = {data: Int.Map.empty, selected: None};
 
   let cutoff = (t1, t2) => compare(t1, t2) == 0;
 };
@@ -64,8 +75,8 @@ module Action = {
     | RUNLOTS
     | ADD
     | UPDATEEVERYTENTH
-    | SELECT(Util.item)
-    | REMOVE(Util.item)
+    | SELECT(int)
+    | REMOVE(int)
     | CLEAR
     | SWAPROWS;
 
