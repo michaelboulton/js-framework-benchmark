@@ -122,34 +122,37 @@ let view = (model: Incr.t(Model.t), ~inject) => {
       />
     );
 
-  let%map rows = model >>| Model.data
-  and selected_item = model >>| Model.selected;
-
   let is_selected =
-    switch (selected_item) {
-    | None => (_i => false)
-    | Some(n) => ((item: Util.item) => phys_equal(item, n))
+    // Turns out this works!
+    switch%map (model >>| Model.selected) {
+    | None => (_ => false)
+    | Some(n) => (idx => idx == n)
     };
 
-  let rows =
-    Array.map(rows, ~f=item =>
-      Action.(
-        <Row
-          //  NOTE: Missing the 'key' here, not sure if this is required
-          onSelect={sender(SELECT(item))}
-          onRemove={sender(REMOVE(item))}
-          selected={is_selected(item)}
-          item
-        />
-      )
-    );
+  let%map rows =
+    Incr.Map.mapi'(
+      model >>| Model.data,
+      ~f=(~key as rowid, ~data as rowlabel) => {
+        let%map rowlabel = rowlabel
+        and is_selected = is_selected;
 
-  let rows = Array.to_list(rows);
+        Action.(
+          <Row
+            //  NOTE: Missing the 'key' here, not sure if this is required
+            onSelect={sender(SELECT(rowid))}
+            onRemove={sender(REMOVE(rowid))}
+            selected={is_selected(rowid)}
+            rowid
+            rowlabel
+          />
+        );
+      },
+    );
 
   <div className="container">
     jumbotron
     <table className="table table-hover table-striped test-data">
-      <tbody> ...rows </tbody>
+      <tbody> ...{Int.Map.data(rows)} </tbody>
     </table>
     <span className="preloadicon glyphicon glyphicon-remove" ariaHidden=true />
   </div>;
