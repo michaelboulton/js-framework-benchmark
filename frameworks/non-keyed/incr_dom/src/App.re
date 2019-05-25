@@ -52,11 +52,15 @@ module Model = {
 
     let swap_rows = model =>
       if (Int.Map.length(model.data) > 998) {
-        let elem_1 = Int.Map.find_exn(model.data, 1);
-        let elem_2 = Int.Map.find_exn(model.data, 998);
+        // https://ocaml.janestreet.com/ocaml-core/latest/doc/base/Base/Map/#val-nth_exn
+        let (idx_1, _) = Int.Map.nth_exn(model.data, 1);
+        let (idx_2, _) = Int.Map.nth_exn(model.data, Int.Map.length(model.data)-1);
+
+        let elem_1 = Int.Map.find_exn(model.data, idx_1);
+        let elem_2 = Int.Map.find_exn(model.data, idx_2);
         let data =
-          Int.Map.set(model.data, ~key=1, ~data=elem_1)
-          |> Int.Map.set(_, ~key=998, ~data=elem_2);
+          Int.Map.set(model.data, ~key=idx_2, ~data=elem_1)
+          |> Int.Map.set(_, ~key=idx_1, ~data=elem_2);
         {...model, data};
       } else {
         model;
