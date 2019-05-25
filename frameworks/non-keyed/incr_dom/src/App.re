@@ -37,16 +37,22 @@ module Model = {
 
     let select = (model, idx) => {
       let itm = Int.Map.find_exn(model.data, idx);
-      let old_itm = Int.Map.find_exn(model.data, model.selected^.id);
+      let old_itm = Int.Map.find(model.data, model.selected^.id);
 
       let data =
         model.data
         |> Int.Map.set(_, ~key=idx, ~data={...itm, selected: true})
-        |> Int.Map.set(
-             _,
-             ~key=old_itm.id,
-             ~data={...old_itm, selected: false},
-           );
+        |> (
+          switch (old_itm) {
+          | None => ident
+          | Some(old_itm) =>
+            Int.Map.set(
+              _,
+              ~key=old_itm.id,
+              ~data={...old_itm, selected: false},
+            )
+          }
+        );
       {data, selected: ref(itm)};
     };
 
@@ -54,7 +60,8 @@ module Model = {
       if (Int.Map.length(model.data) > 998) {
         // https://ocaml.janestreet.com/ocaml-core/latest/doc/base/Base/Map/#val-nth_exn
         let (idx_1, _) = Int.Map.nth_exn(model.data, 1);
-        let (idx_2, _) = Int.Map.nth_exn(model.data, Int.Map.length(model.data)-1);
+        let (idx_2, _) =
+          Int.Map.nth_exn(model.data, Int.Map.length(model.data) - 2);
 
         let elem_1 = Int.Map.find_exn(model.data, idx_1);
         let elem_2 = Int.Map.find_exn(model.data, idx_2);
