@@ -5,12 +5,15 @@ open Util;
 
 module Model = {
   [@deriving (sexp, fields, compare)]
-  type t = {data: Int.Map.t(item)};
+  type t = {
+    selected: ref(item),
+    data: Int.Map.t(item),
+  };
 
   module Updates = {
-    let create_some = (_, n) => {
+    let create_some = (model, n) => {
       let data = Util.build_data(n);
-      {data: data};
+      {...model, data};
     };
 
     let add_some = (model, n) => {
@@ -25,18 +28,26 @@ module Model = {
           | `Left(a) => Some(a)
           | `Right(a) => Some(a);
 
-      {data: Int.Map.merge(model.data, data, ~f=merge)};
+      {...model, data: Int.Map.merge(model.data, data, ~f=merge)};
     };
 
     let update_every_10 = model => {
-      {data: Int.Map.mapi(model.data, ~f=exclaim)};
+      {...model, data: Int.Map.mapi(model.data, ~f=exclaim)};
     };
 
     let select = (model, idx) => {
       let itm = Int.Map.find_exn(model.data, idx);
+      let old_itm = Int.Map.find_exn(model.data, model.selected^.id);
+
       let data =
-        Int.Map.set(model.data, ~key=idx, ~data={...itm, selected: true});
-      {data: data};
+        model.data
+        |> Int.Map.set(_, ~key=idx, ~data={...itm, selected: true})
+        |> Int.Map.set(
+             _,
+             ~key=old_itm.id,
+             ~data={...old_itm, selected: false},
+           );
+      {data, selected: ref(itm)};
     };
 
     let swap_rows = model =>
@@ -46,18 +57,19 @@ module Model = {
         let data =
           Int.Map.set(model.data, ~key=1, ~data=elem_1)
           |> Int.Map.set(_, ~key=998, ~data=elem_2);
-        {data: data};
+        {...model, data};
       } else {
         model;
       };
 
     let remove_item = (model, idx) => {
       let data = Int.Map.remove(model.data, idx);
-      {data: data};
+      {...model, data};
     };
   };
 
-  let empty = {data: Int.Map.empty};
+  let emptyitem = {id: 1, label: "", selected: false};
+  let empty = {data: Int.Map.empty, selected: ref(emptyitem)};
 
   let cutoff = (t1, t2) => compare(t1, t2) == 0;
 };
