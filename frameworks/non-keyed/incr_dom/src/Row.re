@@ -2,8 +2,6 @@ open! Core_kernel;
 open Incr_dom;
 open Elements;
 
-open Util;
-
 let glyph_icon =
   <span className="glyphicon glyphicon-remove" ariaHidden=true />;
 
