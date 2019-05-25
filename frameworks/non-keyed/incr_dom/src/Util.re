@@ -60,17 +60,29 @@ let names = [|
   "keyboard",
 |];
 
+[@deriving (sexp, compare)]
+type item = {
+  id: int,
+  label: string,
+  selected: bool,
+};
+
 let build_data_impl = () => {
   let state = ref(1);
 
   let makeitem = n => {
     (
       n + state^,
-      Array.random_element_exn(adjectives)
-      ++ " "
-      ++ Array.random_element_exn(colours)
-      ++ " "
-      ++ Array.random_element_exn(names),
+      {
+        id: n + state^,
+        selected: false,
+        label:
+          Array.random_element_exn(adjectives)
+          ++ " "
+          ++ Array.random_element_exn(colours)
+          ++ " "
+          ++ Array.random_element_exn(names),
+      },
     );
   };
 
@@ -86,9 +98,9 @@ let build_data_impl = () => {
 
 let build_data = build_data_impl();
 
-let exclaim = (~key, ~data) =>
-  if (0 == (key mod 10)) {
-    data ++ " !!!";
+let exclaim = (~key as _, ~data) =>
+  if (0 == data.id mod 10) {
+    {...data, label: data.label ++ " !!!"};
   } else {
     data;
   };

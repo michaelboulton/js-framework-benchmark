@@ -5,25 +5,19 @@ open Util;
 
 module Model = {
   [@deriving (sexp, fields, compare)]
-  type t = {
-    data: Int.Map.t(string),
-    selected: option(int),
-  };
+  type t = {data: Int.Map.t(item)};
 
   module Updates = {
-    let create_some = (model, n) => {
-      let newdata = Util.build_data(n);
-      {...model, data: newdata};
+    let create_some = (_, n) => {
+      let data = Util.build_data(n);
+      {data: data};
     };
 
     let add_some = (model, n) => {
-      let newdata = Util.build_data(n);
+      let data = Util.build_data(n);
 
       let merge:
-        (
-          ~key: int,
-          [ | `Both(string, string) | `Left(string) | `Right(string)]
-        ) =>
+        (~key: int, [ | `Both(item, item) | `Left(item) | `Right(item)]) =>
         sexp_option('a) =
         (~key as _) =>
           fun
@@ -31,39 +25,39 @@ module Model = {
           | `Left(a) => Some(a)
           | `Right(a) => Some(a);
 
-      {...model, data: Int.Map.merge(model.data, newdata, ~f=merge)};
+      {data: Int.Map.merge(model.data, data, ~f=merge)};
     };
 
     let update_every_10 = model => {
-      {...model, data: Int.Map.mapi(model.data, ~f=exclaim)};
+      {data: Int.Map.mapi(model.data, ~f=exclaim)};
     };
 
     let select = (model, idx) => {
-      {...model, selected: Some(idx)};
+      let itm = Int.Map.find_exn(model.data, idx);
+      let data =
+        Int.Map.set(model.data, ~key=idx, ~data={...itm, selected: true});
+      {data: data};
     };
 
     let swap_rows = model =>
       if (Int.Map.length(model.data) > 998) {
         let elem_1 = Int.Map.find_exn(model.data, 1);
         let elem_2 = Int.Map.find_exn(model.data, 998);
-        let newdata =
+        let data =
           Int.Map.set(model.data, ~key=1, ~data=elem_1)
           |> Int.Map.set(_, ~key=998, ~data=elem_2);
-        {...model, data: newdata};
+        {data: data};
       } else {
         model;
       };
 
     let remove_item = (model, idx) => {
-      let newdata = Int.Map.remove(model.data, idx);
-      switch (model.selected) {
-      | Some(n) when n == idx => {selected: None, data: newdata}
-      | _ => {...model, data: newdata}
-      };
+      let data = Int.Map.remove(model.data, idx);
+      {data: data};
     };
   };
 
-  let empty = {data: Int.Map.empty, selected: None};
+  let empty = {data: Int.Map.empty};
 
   let cutoff = (t1, t2) => compare(t1, t2) == 0;
 };
@@ -122,28 +116,18 @@ let view = (model: Incr.t(Model.t), ~inject) => {
       />
     );
 
-  let is_selected =
-    // Turns out this works!
-    switch%map (model >>| Model.selected) {
-    | None => (_ => false)
-    | Some(n) => (idx => idx == n)
-    };
-
   let%map rows =
     Incr.Map.mapi'(
       model >>| Model.data,
-      ~f=(~key as rowid, ~data as rowlabel) => {
-        let%map rowlabel = rowlabel
-        and is_selected = is_selected;
+      ~f=(~key as rowid, ~data as item) => {
+        let%map item = item;
 
         Action.(
           <Row
             //  NOTE: Missing the 'key' here, not sure if this is required
             onSelect={sender(SELECT(rowid))}
             onRemove={sender(REMOVE(rowid))}
-            selected={is_selected(rowid)}
-            rowid
-            rowlabel
+            item
           />
         );
       },
