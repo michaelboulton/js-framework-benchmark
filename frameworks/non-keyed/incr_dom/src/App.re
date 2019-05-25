@@ -3,6 +3,25 @@ open Incr_dom;
 open Elements;
 open Util;
 
+module Row2 = {
+  module Id = {
+    include Unique_id.Int({});
+  };
+
+  [@deriving (sexp, fields, compare)]
+  type t = {
+    id: Id.t,
+    label: string,
+  };
+};
+
+module RowT =
+  Incr_dom_partial_render.Table.Make(
+    Row2.Id,
+    Int,
+    Incr_dom_partial_render.Table.Default_sort_spec,
+  );
+
 module Model = {
   [@deriving (sexp, fields, compare)]
   type t = {

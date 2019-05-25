@@ -3,9 +3,9 @@
    (name Entrypoint)
    (public_name JsFrameworkBenchmark)
    (preprocess (pps ppx_jane ))
-   (libraries  incr_dom console.lib )
+   (libraries  incr_dom incr_dom_partial_render console.lib )
    (js_of_ocaml (flags
-      --pretty
+      ; --pretty
       --opt 3
       --no-source-map
    ))
