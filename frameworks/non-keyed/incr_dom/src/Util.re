@@ -98,9 +98,11 @@ let build_data_impl = () => {
 
 let build_data = build_data_impl();
 
-let exclaim = (~key as _, ~data) =>
-  if (0 == (data.id - 1) mod 10) {
-    {...data, label: data.label ++ " !!!"};
+let exclaimi = item => {...item, label: item.label ++ " !!!"};
+
+let exclaim = (~key, ~data, existing) =>
+  if (0 == (key - 1) mod 10) {
+    Int.Map.set(existing, ~key, ~data=exclaimi(data));
   } else {
-    data;
+    existing;
   };

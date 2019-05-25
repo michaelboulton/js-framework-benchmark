@@ -32,7 +32,8 @@ module Model = {
     };
 
     let update_every_10 = model => {
-      {...model, data: Int.Map.mapi(model.data, ~f=exclaim)};
+      let data = Int.Map.fold(model.data, ~init=model.data, ~f=exclaim);
+      {...model, data};
     };
 
     let select = (model, idx) => {
