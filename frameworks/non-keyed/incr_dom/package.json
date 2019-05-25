@@ -10,7 +10,7 @@
     "url": "https://github.com/krausest/js-framework-benchmark.git"
   },
   "js-framework-benchmark": {
-    "frameworkVersion": "v0.12.0"
+    "frameworkVersion": "0.12.0"
   },
   "keywords": [
     "webpack",
