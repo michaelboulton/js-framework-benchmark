@@ -25,7 +25,7 @@ module Model = {
         (~key as _) =>
           fun
           | `Both(_, _) => failwith("Unexpected duplicate")
-          | `Left(a) => Some(a)
+          | `Left(a)
           | `Right(a) => Some(a);
 
       {...model, data: Int.Map.merge(model.data, data, ~f=merge)};
