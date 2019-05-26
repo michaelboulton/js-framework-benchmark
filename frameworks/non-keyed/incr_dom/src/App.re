@@ -125,20 +125,9 @@ let on_display = (~old as _, _, _) => ();
 
 let view = (model: Incr.t(Model.t), ~inject) => {
   open Incr.Let_syntax;
+  open Action;
 
   let sender = (action, _) => inject(action);
-
-  let jumbotron =
-    Action.(
-      <Jumbotron
-        run={sender(RUN)}
-        runLots={sender(RUNLOTS)}
-        add={sender(ADD)}
-        update={sender(UPDATEEVERYTENTH)}
-        clear={sender(CLEAR)}
-        swapRows={sender(SWAPROWS)}
-      />
-    );
 
   let%map rows =
     Incr.Map.mapi'(
@@ -146,19 +135,23 @@ let view = (model: Incr.t(Model.t), ~inject) => {
       ~f=(~key as rowid, ~data as item) => {
         let%map item = item;
 
-        Action.(
-          <Row
-            //  NOTE: Missing the 'key' here, not sure if this is required
-            onSelect={sender(SELECT(rowid))}
-            onRemove={sender(REMOVE(rowid))}
-            item
-          />
-        );
+        <Row
+          onSelect={sender(SELECT(rowid))}
+          onRemove={sender(REMOVE(rowid))}
+          item
+        />;
       },
     );
 
   <div className="container">
-    jumbotron
+    <Jumbotron
+      run={sender(RUN)}
+      runLots={sender(RUNLOTS)}
+      add={sender(ADD)}
+      update={sender(UPDATEEVERYTENTH)}
+      clear={sender(CLEAR)}
+      swapRows={sender(SWAPROWS)}
+    />
     <table className="table table-hover table-striped test-data">
       <tbody> ...{Int.Map.data(rows)} </tbody>
     </table>
