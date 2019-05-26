@@ -3,13 +3,13 @@
    (name Entrypoint)
    (public_name JsFrameworkBenchmark)
    (preprocess (pps ppx_jane ))
-   (libraries  incr_dom console.lib )
+   (libraries  incr_dom )
    (js_of_ocaml (flags
-      --pretty
-      --opt 1
-      --source-map
+      ; --pretty
+      --opt 3
+      ; --source-map
    ))
-   (ocamlopt_flags -g)
+   ; (ocamlopt_flags -g)
 )
 
 (install
