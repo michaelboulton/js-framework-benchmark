@@ -38,13 +38,12 @@ module Model = {
 
     let select = (model, idx) => {
       let itm = Int.Map.find_exn(model.data, idx);
-      let old_itm = Int.Map.find(model.data, model.selected^.id);
 
       let data =
         model.data
         |> Int.Map.set(_, ~key=idx, ~data={...itm, selected: true})
         |> (
-          switch (old_itm) {
+          switch (Int.Map.find(model.data, model.selected^.id)) {
           | None => ident
           | Some(old_itm) =>
             Int.Map.set(
@@ -59,15 +58,14 @@ module Model = {
 
     let swap_rows = model =>
       if (Int.Map.length(model.data) > 998) {
-        // https://ocaml.janestreet.com/ocaml-core/latest/doc/base/Base/Map/#val-nth_exn
-        let (idx_1, _) = Int.Map.nth_exn(model.data, 1);
-        let (idx_2, _) =
-          Int.Map.nth_exn(model.data, Int.Map.length(model.data) - 2);
+        let idx_1 = (Int.Map.min_elt_exn(model.data) |> fst) + 1;
+        let idx_2 = (Int.Map.max_elt_exn(model.data) |> fst) - 1;
 
         let elem_1 = Int.Map.find_exn(model.data, idx_1);
         let elem_2 = Int.Map.find_exn(model.data, idx_2);
         let data =
-          Int.Map.set(model.data, ~key=idx_2, ~data=elem_1)
+          model.data
+          |> Int.Map.set(_, ~key=idx_2, ~data=elem_1)
           |> Int.Map.set(_, ~key=idx_1, ~data=elem_2);
         {...model, data};
       } else {
