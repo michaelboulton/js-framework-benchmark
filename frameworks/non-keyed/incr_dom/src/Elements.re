@@ -46,6 +46,11 @@ let genericElement =
       ~id=?,
       ~className=?,
       ~onClick=?,
+      ~onScroll:
+         option(
+           Js_of_ocaml.Js.t(Js_of_ocaml.Dom_html.event) =>
+           Virtual_dom__.Event.t,
+         )=?,
       ~ariaHidden: option(bool)=?,
       ~key=?,
       ~children,
@@ -57,6 +62,7 @@ let genericElement =
       Js_of_ocaml.Js.Unsafe.inject %> Vdom.Attr.property("aria-hidden"),
       ariaHidden,
     ),
+    maybe_apply(Vdom.Attr.on("scroll"), onScroll),
     maybe_apply(Vdom.Attr.on_click, onClick),
     maybe_apply(Vdom.Attr.id, id),
     maybe_apply(Vdom.Attr.type_, type_),

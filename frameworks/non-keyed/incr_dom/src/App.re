@@ -239,7 +239,7 @@ let view = (~inject) => {
 
   let sender = (action, _) => inject(action);
 
-  let scroll_attr = Vdom.Attr.on("scroll", _ => Vdom.Event.Viewport_changed);
+  let onScroll = _ => Vdom.Event.Viewport_changed;
 
   (table: Incr.t(TableT.t(RowItem.t)), _model: Incr.t(Model.t)) => {
     let%map table = table >>| Component.view;
@@ -255,13 +255,7 @@ let view = (~inject) => {
         clear={sender(CLEAR)}
         swapRows={sender(SWAPROWS)}
       />
-      {Vdom.(
-         Node.div(
-           ~key="table",
-           [Attr.id("table-container"), scroll_attr],
-           [table],
-         )
-       )}
+      <div key="table" id="table-container" onScroll> table </div>
       <span
         className="preloadicon glyphicon glyphicon-remove"
         ariaHidden=true
