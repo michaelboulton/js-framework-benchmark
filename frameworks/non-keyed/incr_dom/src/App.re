@@ -88,35 +88,6 @@ module Model = {
   let cutoff = (t1, t2) => compare(t1, t2) == 0;
 };
 
-/***********************************/
-
-// 1 column, no header
-let columns = [(0, TableT.Column.create(~header=<div />, ()))];
-
-let render_row = (row: Incr.t(RowItem.t)) => {
-  open Incr_dom_partial_render.Row_node_spec;
-  open Incr.Let_syntax;
-
-  let%bind item = row;
-
-  <Row item />;
-};
-
-let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
-  open Incr.Let_syntax;
-  let rows = Incr.map(model, ~f=m => Model.data(m))
-  and table_model = model >>| Model.table
-  and old_table_model = old_model >>| Model.table >>| Option.some
-  and columns = columns |> Incr.const;
-  TableT.create(table_model, ~old_model=old_table_model, ~rows, ~columns);
-};
-
-let empty: Model.t = {
-  data: Int.Map.empty,
-  selected: ref({id: 1, label: "", selected: false}),
-  table: create_table(),
-};
-
 module Action = {
   [@deriving sexp]
   type t =
@@ -135,6 +106,56 @@ module Action = {
 
 module State = {
   type t = unit;
+};
+
+/***********************************/
+
+// 1 column, no header
+let columns = [(0, TableT.Column.create(~header=<div />, ()))];
+
+let view_row = (~inject, ~row_id, ~row: Incr.t(RowItem.t)) => {
+  module Rn_spec = Incr_dom_partial_render.Row_node_spec;
+  open Incr.Let_syntax;
+  open Action;
+
+  let sender = (action, _) => inject(action);
+  let%bind item = row;
+
+  let node =
+    <Row
+      onSelect={sender(SELECT(row_id))}
+      onRemove={sender(REMOVE(row_id))}
+      item
+    />;
+
+  // 1 column => 1 cell
+  let cells = [Rn_spec.{Cell.attrs: [], node}];
+
+  return(Rn_spec.{row_attrs: [], cells});
+};
+
+let render_row = (inject, ~row_id, ~row) => view_row(~inject, ~row_id, ~row);
+
+let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
+  open Incr.Let_syntax;
+  let rows = Incr.map(model, ~f=m => Model.data(m))
+  and render_row = render_row(inject)
+  and table_model = model >>| Model.table
+  and old_table_model = old_model >>| Model.table >>| Option.some
+  and columns = columns |> Incr.const;
+  TableT.create(
+    table_model,
+    ~old_model=old_table_model,
+    ~rows,
+    ~columns,
+    ~render_row,
+  );
+};
+
+let empty: Model.t = {
+  data: Int.Map.empty,
+  selected: ref(RowItem.{id: 1, label: "", selected: false}),
+  table: create_table(),
 };
 
 // let apply_action = (table) => {
