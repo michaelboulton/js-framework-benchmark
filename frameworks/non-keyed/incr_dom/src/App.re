@@ -154,31 +154,36 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   );
 };
 
-let empty: Model.t = {
-  data: Int.Map.empty,
-  selected: ref(RowItem.{id: 1, label: "", selected: false}),
-  table: create_table(),
+let apply_action = table => {
+  open Incr.Let_syntax;
+
+  // TODO:
+  // let%map apply_table_action_ = table >>| Component.apply_action;
+
+  let impl = (model, action: Action.t, _, ~schedule_action as _) => {
+    /*
+     // Not using table actions TODO:
+      let schedule_table_action = _ => ();
+      let apply_table_action = action => {
+        apply_table_action_(action, (), ~schedule_action=schedule_table_action);
+      };
+      */
+    switch ((action: Action.t)) {
+    | RUN => Model.Updates.create_some(model, 1000)
+    | RUNLOTS => Model.Updates.create_some(model, 10000)
+    | ADD => Model.Updates.add_some(model, 1000)
+    | UPDATEEVERYTENTH => Model.Updates.update_every_10(model)
+    | SELECT(item) => Model.Updates.select(model, item)
+    | SWAPROWS => Model.Updates.swap_rows(model)
+    | REMOVE(item) => Model.Updates.remove_item(model, item)
+    // | FIXME:
+    | CLEAR => model;
+    | TableAction(a) => model
+    };
+  };
+
+  impl;
 };
-
-// let apply_action = (table) => {
-
-//   let%map table_apply_action = table >>| Component.apply_action;
-
-// let impl = (model, action, _, ~schedule_action as _) =>{
-//   switch ((action: Action.t)) {
-//   | RUN => Model.Updates.create_some(model, 1000)
-//   | RUNLOTS => Model.Updates.create_some(model, 10000)
-//   | ADD => Model.Updates.add_some(model, 1000)
-//   | UPDATEEVERYTENTH => Model.Updates.update_every_10(model)
-//   | SELECT(item) => Model.Updates.select(model, item)
-//   | SWAPROWS => Model.Updates.swap_rows(model)
-//   | REMOVE(item) => Model.Updates.remove_item(model, item)
-//   | CLEAR => Model.empty
-//   | TableAction(a)=>{
-//   }
-//   };
-
-// }}
 
 let update_visibility = m => m;
 
