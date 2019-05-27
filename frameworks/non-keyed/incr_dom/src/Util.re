@@ -60,11 +60,17 @@ let names = [|
   "keyboard",
 |];
 
-[@deriving (sexp, compare)]
-type item = {
-  id: int,
-  label: string,
-  selected: bool,
+module RowItem = {
+  // module Id = {
+  //   include Unique_id.Int({});
+  // };
+
+  [@deriving (sexp, fields, compare)]
+  type t = {
+    id: int,
+    label: string,
+    selected: bool,
+  };
 };
 
 let build_data_impl = () => {
@@ -73,7 +79,7 @@ let build_data_impl = () => {
   let makeitem = n => {
     (
       n + state^,
-      {
+      RowItem.{
         id: n + state^,
         selected: false,
         label:
@@ -98,7 +104,7 @@ let build_data_impl = () => {
 
 let build_data = build_data_impl();
 
-let exclaimi = item => {...item, label: item.label ++ " !!!"};
+let exclaimi = item => RowItem.{...item, label: item.label ++ " !!!"};
 
 let exclaim = (~key, ~data, existing) =>
   if (0 == (key - 1) mod 10) {

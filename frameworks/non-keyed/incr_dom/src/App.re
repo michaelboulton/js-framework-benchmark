@@ -3,30 +3,21 @@ open Incr_dom;
 open Elements;
 open Util;
 
-module Row2 = {
-  module Id = {
-    include Unique_id.Int({});
-  };
-
-  [@deriving (sexp, fields, compare)]
-  type t = {
-    id: Id.t,
-    label: string,
-  };
-};
-
-module RowT =
+module TableT =
   Incr_dom_partial_render.Table.Make(
-    Row2.Id,
+    Int,
     Int,
     Incr_dom_partial_render.Table.Default_sort_spec,
   );
 
+/***********************************/
+
 module Model = {
-  [@deriving (sexp, fields, compare)]
+  [@deriving (fields, compare)]
   type t = {
-    selected: ref(item),
-    data: Int.Map.t(item),
+    selected: ref(RowItem.t),
+    data: Int.Map.t(RowItem.t),
+    table: TableT.Model.t,
   };
 
   module Updates = {
@@ -38,14 +29,11 @@ module Model = {
     let add_some = (model, n) => {
       let data = Util.build_data(n);
 
-      let merge:
-        (~key: int, [ | `Both(item, item) | `Left(item) | `Right(item)]) =>
-        sexp_option('a) =
-        (~key as _) =>
-          fun
-          | `Both(_, _) => failwith("Unexpected duplicate")
-          | `Left(a)
-          | `Right(a) => Some(a);
+      let merge = (~key as _) =>
+        fun
+        | `Both(_, _) => failwith("Unexpected duplicate")
+        | `Left(a)
+        | `Right(a) => Some(a);
 
       {...model, data: Int.Map.merge(model.data, data, ~f=merge)};
     };
@@ -72,7 +60,7 @@ module Model = {
             )
           }
         );
-      {data, selected: ref(itm)};
+      {...model, data, selected: ref(itm)};
     };
 
     let swap_rows = model =>
@@ -97,10 +85,36 @@ module Model = {
     };
   };
 
-  let emptyitem = {id: 1, label: "", selected: false};
-  let empty = {data: Int.Map.empty, selected: ref(emptyitem)};
-
   let cutoff = (t1, t2) => compare(t1, t2) == 0;
+};
+
+/***********************************/
+
+// 1 column, no header
+let columns = [(0, TableT.Column.create(~header=<div />, ()))];
+
+let render_row = (row: Incr.t(RowItem.t)) => {
+  open Incr_dom_partial_render.Row_node_spec;
+  open Incr.Let_syntax;
+
+  let%bind item = row;
+
+  <Row item />;
+};
+
+let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
+  open Incr.Let_syntax;
+  let rows = Incr.map(model, ~f=m => Model.data(m))
+  and table_model = model >>| Model.table
+  and old_table_model = old_model >>| Model.table >>| Option.some
+  and columns = columns |> Incr.const;
+  TableT.create(table_model, ~old_model=old_table_model, ~rows, ~columns);
+};
+
+let empty: Model.t = {
+  data: Int.Map.empty,
+  selected: ref({id: 1, label: "", selected: false}),
+  table: create_table(),
 };
 
 module Action = {
@@ -113,7 +127,8 @@ module Action = {
     | SELECT(int)
     | REMOVE(int)
     | CLEAR
-    | SWAPROWS;
+    | SWAPROWS
+    | TableAction(TableT.Action.t);
 
   let should_log = _ => is_debug;
 };
@@ -122,17 +137,25 @@ module State = {
   type t = unit;
 };
 
-let apply_action = (model, action, _, ~schedule_action as _) =>
-  switch ((action: Action.t)) {
-  | RUN => Model.Updates.create_some(model, 1000)
-  | RUNLOTS => Model.Updates.create_some(model, 10000)
-  | ADD => Model.Updates.add_some(model, 1000)
-  | UPDATEEVERYTENTH => Model.Updates.update_every_10(model)
-  | SELECT(item) => Model.Updates.select(model, item)
-  | SWAPROWS => Model.Updates.swap_rows(model)
-  | REMOVE(item) => Model.Updates.remove_item(model, item)
-  | CLEAR => Model.empty
-  };
+// let apply_action = (table) => {
+
+//   let%map table_apply_action = table >>| Component.apply_action;
+
+// let impl = (model, action, _, ~schedule_action as _) =>{
+//   switch ((action: Action.t)) {
+//   | RUN => Model.Updates.create_some(model, 1000)
+//   | RUNLOTS => Model.Updates.create_some(model, 10000)
+//   | ADD => Model.Updates.add_some(model, 1000)
+//   | UPDATEEVERYTENTH => Model.Updates.update_every_10(model)
+//   | SELECT(item) => Model.Updates.select(model, item)
+//   | SWAPROWS => Model.Updates.swap_rows(model)
+//   | REMOVE(item) => Model.Updates.remove_item(model, item)
+//   | CLEAR => Model.empty
+//   | TableAction(a)=>{
+//   }
+//   };
+
+// }}
 
 let update_visibility = m => m;
 
