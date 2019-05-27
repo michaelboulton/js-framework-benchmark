@@ -144,6 +144,10 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   and old_table_model = old_model >>| Model.table >>| Option.some
   and inject_table_action = a => inject(Action.TableAction(a))
   and columns = columns |> Incr.const;
+
+  let scroll_attr = Vdom.Attr.on("scroll", _ => Vdom.Event.Viewport_changed);
+
+  // FIXME: Split this out into a element?
   TableT.create(
     table_model,
     ~old_model=old_table_model,
@@ -151,15 +155,25 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
     ~columns,
     ~render_row,
     ~inject=inject_table_action,
+    ~attrs=[
+      Vdom.Attr.classes([
+        "table",
+        "table-hover",
+        "table-striped",
+        "test-data",
+      ]),
+      scroll_attr,
+    ],
   );
 };
 
-let apply_action = table => {
+let apply_action = (table, model: Incr.t(Model.t)) => {
   open Incr.Let_syntax;
 
-  let%map apply_table_action_ = table >>| Component.apply_action;
+  let%map apply_table_action_ = table >>| Component.apply_action
+  and model = model;
 
-  let impl = (model, action: Action.t, _, ~schedule_action as _) => {
+  (action: Action.t, _, ~schedule_action as _) => {
     let schedule_table_action = _ => ();
     let apply_table_action = action => {
       apply_table_action_(action, (), ~schedule_action=schedule_table_action);
@@ -178,8 +192,6 @@ let apply_action = table => {
     | TableAction(a) => {...model, table: apply_table_action(a)}
     };
   };
-
-  impl;
 };
 
 let update_visibility = (table, model: Incr.t(Model.t)) => {
@@ -202,25 +214,14 @@ let on_startup = (~schedule_action as _, _) => Async_kernel.return();
 
 let on_display = (~old as _, _, _) => ();
 
-let view = (model: Incr.t(Model.t), ~inject) => {
+let view =
+    (table: Incr.t(TableT.t(RowItem.t)), _model: Incr.t(Model.t), ~inject) => {
   open Incr.Let_syntax;
   open Action;
 
   let sender = (action, _) => inject(action);
 
-  let%map rows =
-    Incr.Map.mapi'(
-      model >>| Model.data,
-      ~f=(~key as rowid, ~data as item) => {
-        let%map item = item;
-
-        <Row
-          onSelect={sender(SELECT(rowid))}
-          onRemove={sender(REMOVE(rowid))}
-          item
-        />;
-      },
-    );
+  let%map table = table >>| Component.view;
 
   <div className="container">
     <Jumbotron
@@ -231,21 +232,20 @@ let view = (model: Incr.t(Model.t), ~inject) => {
       clear={sender(CLEAR)}
       swapRows={sender(SWAPROWS)}
     />
-    <table className="table table-hover table-striped test-data">
-      <tbody> ...{Int.Map.data(rows)} </tbody>
-    </table>
+    table
     <span className="preloadicon glyphicon glyphicon-remove" ariaHidden=true />
   </div>;
 };
 
-let create = (model: Incr.t(Model.t), ~old_model as _, ~inject) => {
+let create = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   open Incr.Let_syntax;
-  let%map apply_action = {
-    let%map model = model;
-    apply_action(model);
-  }
-  and view = view(model, ~inject)
+
+  let table = create_table(model, ~old_model, ~inject);
+
+  let%map apply_action = apply_action(table, model)
+  and update_visibility = update_visibility(table, model)
+  and view = view(table, model, ~inject)
   and model = model;
 
-  Component.create(~apply_action, model, view);
+  Component.create(~apply_action, ~update_visibility, model, view);
 };
