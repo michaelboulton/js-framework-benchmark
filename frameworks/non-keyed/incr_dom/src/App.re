@@ -214,16 +214,13 @@ let on_startup = (~schedule_action as _, _) => Async_kernel.return();
 
 let on_display = (~old as _, _, _) => ();
 
-let view =
-    (table: Incr.t(TableT.t(RowItem.t)), _model: Incr.t(Model.t), ~inject) => {
+let view = (~inject) => {
   open Incr.Let_syntax;
   open Action;
 
   let sender = (action, _) => inject(action);
 
-  let%map table = table >>| Component.view;
-
-  <div className="container">
+  let jumbotron =
     <Jumbotron
       run={sender(RUN)}
       runLots={sender(RUNLOTS)}
@@ -231,10 +228,20 @@ let view =
       update={sender(UPDATEEVERYTENTH)}
       clear={sender(CLEAR)}
       swapRows={sender(SWAPROWS)}
-    />
-    table
-    <span className="preloadicon glyphicon glyphicon-remove" ariaHidden=true />
-  </div>;
+    />;
+
+  (table: Incr.t(TableT.t(RowItem.t)), _model: Incr.t(Model.t)) => {
+    let%map table = table >>| Component.view;
+
+    <div className="container">
+      jumbotron
+      table
+      <span
+        className="preloadicon glyphicon glyphicon-remove"
+        ariaHidden=true
+      />
+    </div>;
+  };
 };
 
 let create = (model: Incr.t(Model.t), ~old_model, ~inject) => {
