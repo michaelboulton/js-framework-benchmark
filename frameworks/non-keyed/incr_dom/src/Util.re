@@ -1,5 +1,7 @@
 open! Core_kernel;
 
+let is_debug = false;
+
 let adjectives = [|
   "pretty",
   "large",
@@ -27,6 +29,7 @@ let adjectives = [|
   "expensive",
   "fancy",
 |];
+
 let colours = [|
   "red",
   "yellow",
@@ -40,6 +43,7 @@ let colours = [|
   "black",
   "orange",
 |];
+
 let names = [|
   "table",
   "chair",
@@ -60,34 +64,31 @@ let names = [|
 type item = {
   id: int,
   label: string,
+  selected: bool,
 };
-
-// This is for if you want to _index_ using items
-// module Item_Mappable = {
-//   module T = {
-//     [@deriving (sexp, compare)]
-//     type t = item;
-//   };
-//   include T;
-//   include Comparable.Make(T);
-// };
 
 let build_data_impl = () => {
   let state = ref(1);
 
   let makeitem = n => {
-    id: n + state^,
-    label:
-      Array.random_element_exn(adjectives)
-      ++ " "
-      ++ Array.random_element_exn(colours)
-      ++ " "
-      ++ Array.random_element_exn(names),
+    (
+      n + state^,
+      {
+        id: n + state^,
+        selected: false,
+        label:
+          Array.random_element_exn(adjectives)
+          ++ " "
+          ++ Array.random_element_exn(colours)
+          ++ " "
+          ++ Array.random_element_exn(names),
+      },
+    );
   };
-  let generate = Array.init(_, ~f=makeitem);
 
   let impl = count => {
-    let generated = generate(count);
+    let generated =
+      Int.Map.of_increasing_iterator_unchecked(~len=count, ~f=makeitem);
     state := state^ + count;
     generated;
   };
@@ -97,9 +98,11 @@ let build_data_impl = () => {
 
 let build_data = build_data_impl();
 
-let exclaim = (idx, d: item) =>
-  if (0 == idx mod 10) {
-    {...d, label: d.label ++ " !!!"};
+let exclaimi = item => {...item, label: item.label ++ " !!!"};
+
+let exclaim = (~key, ~data, existing) =>
+  if (0 == (key - 1) mod 10) {
+    Int.Map.set(existing, ~key, ~data=exclaimi(data));
   } else {
-    d;
+    existing;
   };

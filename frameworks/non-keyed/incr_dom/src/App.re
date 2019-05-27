@@ -25,53 +25,80 @@ module RowT =
 module Model = {
   [@deriving (sexp, fields, compare)]
   type t = {
-    // TODO: Change this back to an Int.Map.t once it's working
-    data: array(item),
-    selected: option(item),
+    selected: ref(item),
+    data: Int.Map.t(item),
   };
 
   module Updates = {
     let create_some = (model, n) => {
-      let newdata = Util.build_data(n);
-      {...model, data: newdata};
+      let data = Util.build_data(n);
+      {...model, data};
     };
 
     let add_some = (model, n) => {
-      let newdata = Util.build_data(n);
-      {...model, data: Array.append(model.data, newdata)};
+      let data = Util.build_data(n);
+
+      let merge:
+        (~key: int, [ | `Both(item, item) | `Left(item) | `Right(item)]) =>
+        sexp_option('a) =
+        (~key as _) =>
+          fun
+          | `Both(_, _) => failwith("Unexpected duplicate")
+          | `Left(a)
+          | `Right(a) => Some(a);
+
+      {...model, data: Int.Map.merge(model.data, data, ~f=merge)};
     };
 
     let update_every_10 = model => {
-      {...model, data: Array.mapi(model.data, ~f=exclaim)};
+      let data = Int.Map.fold(model.data, ~init=model.data, ~f=exclaim);
+      {...model, data};
     };
 
-    let select = (model, item) => {
-      {...model, selected: Some(item)};
+    let select = (model, idx) => {
+      let itm = Int.Map.find_exn(model.data, idx);
+
+      let data =
+        model.data
+        |> Int.Map.set(_, ~key=idx, ~data={...itm, selected: true})
+        |> (
+          switch (Int.Map.find(model.data, model.selected^.id)) {
+          | None => ident
+          | Some(old_itm) =>
+            Int.Map.set(
+              _,
+              ~key=old_itm.id,
+              ~data={...old_itm, selected: false},
+            )
+          }
+        );
+      {data, selected: ref(itm)};
     };
 
     let swap_rows = model =>
-      if (Array.length(model.data) > 998) {
-        let newdata = Array.copy(model.data);
-        newdata[1] = model.data[998];
-        newdata[998] = model.data[1];
-        {...model, data: newdata};
+      if (Int.Map.length(model.data) > 998) {
+        let idx_1 = (Int.Map.min_elt_exn(model.data) |> fst) + 1;
+        let idx_2 = (Int.Map.max_elt_exn(model.data) |> fst) - 1;
+
+        let elem_1 = Int.Map.find_exn(model.data, idx_1);
+        let elem_2 = Int.Map.find_exn(model.data, idx_2);
+        let data =
+          model.data
+          |> Int.Map.set(_, ~key=idx_2, ~data=elem_1)
+          |> Int.Map.set(_, ~key=idx_1, ~data=elem_2);
+        {...model, data};
       } else {
         model;
       };
 
-    let remove_item = (model, item) => {
-      let isnt_item = c => !phys_equal(item, c);
-      switch (model.selected) {
-      | Some(n) when phys_equal(n, item) => {
-          selected: None,
-          data: Array.filter(model.data, ~f=isnt_item),
-        }
-      | _ => {...model, data: Array.filter(model.data, ~f=isnt_item)}
-      };
+    let remove_item = (model, idx) => {
+      let data = Int.Map.remove(model.data, idx);
+      {...model, data};
     };
   };
 
-  let empty = {data: [||], selected: None};
+  let emptyitem = {id: 1, label: "", selected: false};
+  let empty = {data: Int.Map.empty, selected: ref(emptyitem)};
 
   let cutoff = (t1, t2) => compare(t1, t2) == 0;
 };
@@ -83,12 +110,12 @@ module Action = {
     | RUNLOTS
     | ADD
     | UPDATEEVERYTENTH
-    | SELECT(Util.item)
-    | REMOVE(Util.item)
+    | SELECT(int)
+    | REMOVE(int)
     | CLEAR
     | SWAPROWS;
 
-  let should_log = _ => true;
+  let should_log = _ => is_debug;
 };
 
 module State = {
@@ -115,49 +142,35 @@ let on_display = (~old as _, _, _) => ();
 
 let view = (model: Incr.t(Model.t), ~inject) => {
   open Incr.Let_syntax;
+  open Action;
 
   let sender = (action, _) => inject(action);
 
-  let jumbotron =
-    Action.(
-      <Jumbotron
-        run={sender(RUN)}
-        runLots={sender(RUNLOTS)}
-        add={sender(ADD)}
-        update={sender(UPDATEEVERYTENTH)}
-        clear={sender(CLEAR)}
-        swapRows={sender(SWAPROWS)}
-      />
-    );
+  let%map rows =
+    Incr.Map.mapi'(
+      model >>| Model.data,
+      ~f=(~key as rowid, ~data as item) => {
+        let%map item = item;
 
-  let%map rows = model >>| Model.data
-  and selected_item = model >>| Model.selected;
-
-  let is_selected =
-    switch (selected_item) {
-    | None => (_i => false)
-    | Some(n) => ((item: Util.item) => phys_equal(item, n))
-    };
-
-  let rows =
-    Array.map(rows, ~f=item =>
-      Action.(
         <Row
-          //  NOTE: Missing the 'key' here, not sure if this is required
-          onSelect={sender(SELECT(item))}
-          onRemove={sender(REMOVE(item))}
-          selected={is_selected(item)}
+          onSelect={sender(SELECT(rowid))}
+          onRemove={sender(REMOVE(rowid))}
           item
-        />
-      )
+        />;
+      },
     );
-
-  let rows = Array.to_list(rows);
 
   <div className="container">
-    jumbotron
+    <Jumbotron
+      run={sender(RUN)}
+      runLots={sender(RUNLOTS)}
+      add={sender(ADD)}
+      update={sender(UPDATEEVERYTENTH)}
+      clear={sender(CLEAR)}
+      swapRows={sender(SWAPROWS)}
+    />
     <table className="table table-hover table-striped test-data">
-      <tbody> ...rows </tbody>
+      <tbody> ...{Int.Map.data(rows)} </tbody>
     </table>
     <span className="preloadicon glyphicon glyphicon-remove" ariaHidden=true />
   </div>;
