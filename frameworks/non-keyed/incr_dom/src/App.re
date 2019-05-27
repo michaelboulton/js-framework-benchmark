@@ -15,7 +15,7 @@ module TableT =
 module Model = {
   [@deriving (fields, compare)]
   type t = {
-    selected: ref(RowItem.t),
+    selected: option(RowItem.t),
     data: Int.Map.t(RowItem.t),
     table: TableT.Model.t,
   };
@@ -45,12 +45,13 @@ module Model = {
 
     let select = (model, idx) => {
       let itm = Int.Map.find_exn(model.data, idx);
+      open Option.Let_syntax;
 
       let data =
         model.data
         |> Int.Map.set(_, ~key=idx, ~data={...itm, selected: true})
         |> (
-          switch (Int.Map.find(model.data, model.selected^.id)) {
+          switch (model.selected >>= (a => Int.Map.find(model.data, a.id))) {
           | None => ident
           | Some(old_itm) =>
             Int.Map.set(
@@ -60,7 +61,7 @@ module Model = {
             )
           }
         );
-      {...model, data, selected: ref(itm)};
+      {...model, data, selected: Some(itm)};
     };
 
     let swap_rows = model =>
@@ -243,6 +244,23 @@ let view = (~inject) => {
     </div>;
   };
 };
+
+let init: unit => Model.t =
+  () => {
+    let height_guess = 43.;
+
+    let table =
+      TableT.Model.create(
+        ~scroll_margin=Incr_dom_partial_render.Table.Margin.uniform(5.),
+        ~scroll_region=Element("table-container"),
+        ~float_header=Edge,
+        ~float_first_col=Px_from_edge(-1),
+        ~height_guess,
+        (),
+      );
+
+    {data: Int.Map.empty, selected: None, table};
+  };
 
 let create = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   open Incr.Let_syntax;
