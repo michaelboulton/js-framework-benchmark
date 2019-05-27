@@ -244,8 +244,6 @@ let view = (~inject) => {
   (table: Incr.t(TableT.t(RowItem.t)), _model: Incr.t(Model.t)) => {
     let%map table = table >>| Component.view;
 
-    /* FIXME: Sort out the onscroll attribute so this can be done as an element */
-
     <div className="container">
       <Jumbotron
         run={sender(RUN)}
