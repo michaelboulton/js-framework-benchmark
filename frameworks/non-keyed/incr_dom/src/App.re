@@ -168,6 +168,23 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   );
 };
 
+let init: unit => Model.t =
+  () => {
+    let height_guess = 43.;
+
+    let table =
+      TableT.Model.create(
+        ~scroll_margin=Incr_dom_partial_render.Table.Margin.uniform(5.),
+        ~scroll_region=Element("table-container"),
+        ~float_header=Edge,
+        ~float_first_col=Px_from_edge(-1),
+        ~height_guess,
+        (),
+      );
+
+    {data: Int.Map.empty, selected: None, table};
+  };
+
 let apply_action = (table, model: Incr.t(Model.t)) => {
   open Incr.Let_syntax;
 
@@ -188,8 +205,7 @@ let apply_action = (table, model: Incr.t(Model.t)) => {
     | SELECT(item) => Model.Updates.select(model, item)
     | SWAPROWS => Model.Updates.swap_rows(model)
     | REMOVE(item) => Model.Updates.remove_item(model, item)
-    // | FIXME:
-    | CLEAR => model
+    | CLEAR => init()
     | TableAction(a) => {...model, table: apply_table_action(a)}
     };
   };
@@ -244,23 +260,6 @@ let view = (~inject) => {
     </div>;
   };
 };
-
-let init: unit => Model.t =
-  () => {
-    let height_guess = 43.;
-
-    let table =
-      TableT.Model.create(
-        ~scroll_margin=Incr_dom_partial_render.Table.Margin.uniform(5.),
-        ~scroll_region=Element("table-container"),
-        ~float_header=Edge,
-        ~float_first_col=Px_from_edge(-1),
-        ~height_guess,
-        (),
-      );
-
-    {data: Int.Map.empty, selected: None, table};
-  };
 
 let create = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   open Incr.Let_syntax;
