@@ -111,8 +111,11 @@ module State = {
 
 /***********************************/
 
-// 1 column, no header
-let columns = [(0, TableT.Column.create(~header=<div />, ()))];
+// 1 column
+let columns = {
+  let header = <div> {Vdom.Node.text("jisfd")} </div>;
+  [(0, TableT.Column.create(~header, ()))];
+};
 
 let view_row = (~inject, ~row_id, ~row: Incr.t(RowItem.t)) => {
   module Rn_spec = Incr_dom_partial_render.Row_node_spec;
@@ -170,7 +173,7 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
 
 let init: unit => Model.t =
   () => {
-    let height_guess = 43.;
+    let height_guess = 30.;
 
     let table =
       TableT.Model.create(
@@ -191,8 +194,10 @@ let apply_action = (table, model: Incr.t(Model.t)) => {
   let%map apply_table_action_ = table >>| Component.apply_action
   and model = model;
 
-  (action: Action.t, _, ~schedule_action as _) => {
-    let schedule_table_action = _ => ();
+  (action: Action.t, _, ~schedule_action) => {
+    let schedule_table_action = a => {
+      schedule_action(Action.TableAction(a));
+    };
     let apply_table_action = action => {
       apply_table_action_(action, (), ~schedule_action=schedule_table_action);
     };
