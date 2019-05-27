@@ -29,14 +29,25 @@ let no_empty = item =>
   };
 
 let genericElement =
+    /*
+     NOTE: Putting optional arguments after the 'required' arguments _and
+     before_ other required arguments is a bit weird, but it is needed
+     due to the way jsx works in reason
+     */
     (
-      creator,
+      creator:
+        (
+          ~key: Base.string=?,
+          Base.list(Virtual_dom__.Attr.t),
+          Base.list(Vdom.Node.t)
+        ) =>
+        Vdom.Node.t,
       ~type_=?,
       ~id=?,
       ~className=?,
       ~onClick=?,
       ~ariaHidden: option(bool)=?,
-      ~key: option(int)=?,
+      ~key=?,
       ~children,
       _: unit,
     ) => {
@@ -46,10 +57,6 @@ let genericElement =
       Js_of_ocaml.Js.Unsafe.inject %> Vdom.Attr.property("aria-hidden"),
       ariaHidden,
     ),
-    maybe_apply(
-      Js_of_ocaml.Js.Unsafe.inject %> Vdom.Attr.property("key"),
-      key,
-    ),
     maybe_apply(Vdom.Attr.on_click, onClick),
     maybe_apply(Vdom.Attr.id, id),
     maybe_apply(Vdom.Attr.type_, type_),
@@ -57,7 +64,10 @@ let genericElement =
 
   let filtered = List.filter_opt(attrs);
 
-  creator(filtered, children);
+  switch (key) {
+  | None => creator(filtered, children)
+  | Some(k) => creator(~key=k, filtered, children)
+  };
 };
 
 let body = genericElement(Vdom.Node.body);

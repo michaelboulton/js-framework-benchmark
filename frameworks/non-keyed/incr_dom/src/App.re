@@ -149,8 +149,6 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   and inject_table_action = a => inject(Action.TableAction(a))
   and columns = columns |> Incr.const;
 
-  let scroll_attr = Vdom.Attr.on("scroll", _ => Vdom.Event.Viewport_changed);
-
   // FIXME: Split this out into a element?
   TableT.create(
     table_model,
@@ -166,7 +164,6 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
         "table-striped",
         "test-data",
       ]),
-      scroll_attr,
     ],
   );
 };
@@ -242,22 +239,29 @@ let view = (~inject) => {
 
   let sender = (action, _) => inject(action);
 
-  let jumbotron =
-    <Jumbotron
-      run={sender(RUN)}
-      runLots={sender(RUNLOTS)}
-      add={sender(ADD)}
-      update={sender(UPDATEEVERYTENTH)}
-      clear={sender(CLEAR)}
-      swapRows={sender(SWAPROWS)}
-    />;
+  let scroll_attr = Vdom.Attr.on("scroll", _ => Vdom.Event.Viewport_changed);
 
   (table: Incr.t(TableT.t(RowItem.t)), _model: Incr.t(Model.t)) => {
     let%map table = table >>| Component.view;
 
+    /* FIXME: Sort out the onscroll attribute so this can be done as an element */
+
     <div className="container">
-      jumbotron
-      table
+      <Jumbotron
+        run={sender(RUN)}
+        runLots={sender(RUNLOTS)}
+        add={sender(ADD)}
+        update={sender(UPDATEEVERYTENTH)}
+        clear={sender(CLEAR)}
+        swapRows={sender(SWAPROWS)}
+      />
+      {Vdom.(
+         Node.div(
+           ~key="table",
+           [Attr.id("table-container"), scroll_attr],
+           [table],
+         )
+       )}
       <span
         className="preloadicon glyphicon glyphicon-remove"
         ariaHidden=true
