@@ -168,14 +168,16 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   );
 };
 
+let c_TABLE_CONTAINER = "table-container";
+
 let init: unit => Model.t =
   () => {
-    let height_guess = 30.;
+    let height_guess = 100.;
 
     let table =
       TableT.Model.create(
         ~scroll_margin=Incr_dom_partial_render.Table.Margin.uniform(5.),
-        ~scroll_region=Element("table-container"),
+        ~scroll_region=Element(c_TABLE_CONTAINER),
         ~float_header=Edge,
         ~float_first_col=Px_from_edge(-1),
         ~height_guess,
@@ -244,7 +246,7 @@ let view = (~inject) => {
   (table: Incr.t(TableT.t(RowItem.t)), _model: Incr.t(Model.t)) => {
     let%map table = table >>| Component.view;
 
-    <div className="container">
+    <div className="container" id=c_TABLE_CONTAINER onScroll>
       <Jumbotron
         run={sender(RUN)}
         runLots={sender(RUNLOTS)}
@@ -253,7 +255,7 @@ let view = (~inject) => {
         clear={sender(CLEAR)}
         swapRows={sender(SWAPROWS)}
       />
-      <div key="table" id="table-container" onScroll> table </div>
+      table
       <span
         className="preloadicon glyphicon glyphicon-remove"
         ariaHidden=true
