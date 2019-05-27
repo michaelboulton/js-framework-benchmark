@@ -157,17 +157,14 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
 let apply_action = table => {
   open Incr.Let_syntax;
 
-  // TODO:
-  // let%map apply_table_action_ = table >>| Component.apply_action;
+  let%map apply_table_action_ = table >>| Component.apply_action;
 
   let impl = (model, action: Action.t, _, ~schedule_action as _) => {
-    /*
-     // Not using table actions TODO:
-      let schedule_table_action = _ => ();
-      let apply_table_action = action => {
-        apply_table_action_(action, (), ~schedule_action=schedule_table_action);
-      };
-      */
+    let schedule_table_action = _ => ();
+    let apply_table_action = action => {
+      apply_table_action_(action, (), ~schedule_action=schedule_table_action);
+    };
+
     switch ((action: Action.t)) {
     | RUN => Model.Updates.create_some(model, 1000)
     | RUNLOTS => Model.Updates.create_some(model, 10000)
@@ -177,15 +174,29 @@ let apply_action = table => {
     | SWAPROWS => Model.Updates.swap_rows(model)
     | REMOVE(item) => Model.Updates.remove_item(model, item)
     // | FIXME:
-    | CLEAR => model;
-    | TableAction(a) => model
+    | CLEAR => model
+    | TableAction(a) => {...model, table: apply_table_action(a)}
     };
   };
 
   impl;
 };
 
-let update_visibility = m => m;
+let update_visibility = (table, model: Incr.t(Model.t)) => {
+  open Incr.Let_syntax;
+  let%map model = model
+  and table = table;
+
+  let impl = (~schedule_action) => {
+    let update_table = a => schedule_action(Action.TableAction(a));
+    let table =
+      Component.update_visibility(table, ~schedule_action=update_table);
+
+    {...model, table};
+  };
+
+  impl;
+};
 
 let on_startup = (~schedule_action as _, _) => Async_kernel.return();
 
