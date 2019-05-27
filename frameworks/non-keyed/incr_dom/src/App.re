@@ -142,6 +142,7 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
   and render_row = render_row(inject)
   and table_model = model >>| Model.table
   and old_table_model = old_model >>| Model.table >>| Option.some
+  and inject_table_action = a => inject(Action.TableAction(a))
   and columns = columns |> Incr.const;
   TableT.create(
     table_model,
@@ -149,6 +150,7 @@ let create_table = (model: Incr.t(Model.t), ~old_model, ~inject) => {
     ~rows,
     ~columns,
     ~render_row,
+    ~inject=inject_table_action,
   );
 };
 
