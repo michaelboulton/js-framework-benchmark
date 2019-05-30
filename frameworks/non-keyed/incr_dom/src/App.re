@@ -45,6 +45,7 @@ module Model = {
         |> (
           switch (Int.Map.find(model.data, model.selected^.id)) {
           | None => ident
+          | Some(old_itm) when old_itm.id == itm.id => ident
           | Some(old_itm) =>
             Int.Map.set(
               _,
