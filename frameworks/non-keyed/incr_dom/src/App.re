@@ -15,7 +15,7 @@ module TableT =
 module Model = {
   [@deriving (fields, compare)]
   type t = {
-    selected: option(RowItem.t),
+    selected: option(ref(RowItem.t)),
     data: Int.Map.t(RowItem.t),
     table: TableT.Model.t,
   };
@@ -51,8 +51,9 @@ module Model = {
         model.data
         |> Int.Map.set(_, ~key=idx, ~data={...itm, selected: true})
         |> (
-          switch (model.selected >>= (a => Int.Map.find(model.data, a.id))) {
+          switch (model.selected >>= (a => Int.Map.find(model.data, a^.id))) {
           | None => ident
+          | Some(old_itm) when old_itm.id == itm.id => ident
           | Some(old_itm) =>
             Int.Map.set(
               _,
@@ -61,7 +62,7 @@ module Model = {
             )
           }
         );
-      {...model, data, selected: Some(itm)};
+      {...model, data, selected: Some(ref(itm))};
     };
 
     let swap_rows = model =>
